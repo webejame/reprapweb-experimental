@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="">
+<meta name="author" content="">
+
+<title>RepRapWeb2</title>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="jquery.min.js"></script>
+<script src="./js/bootstrap.min.js"></script>
+<script src="./main.js"></script>
+
+<!-- modified jsc3d to support loading STL from BinaryString -->
+<script src="jsc3d/jsc3d.js"></script>
+<script src="jsc3d/jsc3d.touch.js"></script>
+<script src="jsc3d/jsc3d.webgl.js"></script>
+
+<link rel="stylesheet" href="./css/bootstrap.min.css" />
+<link rel="stylesheet" href="./css/bootstrap-theme.min.css" />
+<link rel="stylesheet" href="screen-mobile.css" />
+
+</head>
+
+<body>
+<div class="navbar navbar-inverse navbar-fixed-top" role="navigation">
+<div class="container-fluid">
+<div class="navbar-header">
+<button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+<span class="sr-only">Toggle navigation</span>
+<span class="icon-bar"></span>
+<span class="icon-bar"></span>
+</button>
+<a class="navbar-brand" href="#">RepRapWeb</a>
+
+</div>
+<div class="navbar-collapse collapse">
+<ul class="nav navbar-nav navbar-right">
+</ul>
+</div>
+</div>
+</div>
+<br>
+<br>
+<br>
+
+
+<div class="col-md-4" id="col3">
+
+<span class="icon-bar">
+<div class="input-group">
+<span class="input-group-addon" style="width:130px;">Select Port</span><select id="choosePort" class="form-control">
+<option val="no">Select a serial port</option>
+</span>
+</select>
+</div>
+<br>
+
+<div class="well well-sm well-custom"><center><span id="mainStatus">Status: Waiting for STL or GCODE upload...</span></center></div>
+
+	<div class="well well-sm"><center>X<span  id="xPOS" style="color: black; font-weight: bold;">:-.--</span>  Y<span id="yPOS" style="color: black; font-weight: bold;">:-.--</span>  Z<span id="zPOS" style="color: black; font-weight: bold;">:-.--</span>  E<span id="ePOS" style="color: black; font-weight: bold;">:-.--</span></center></div>
+
+		<div id="console"></div>
+
+		<div class="input-group">
+		<input type="text" class="form-control" id="command">
+		<span class="input-group-btn">
+		<button id="sendCommand" class="btn btn-default" type="button">
+		Send
+		</button>
+		</span>
+		</div>
+<br>
+<span id="inputGcode" type="button" class="btn btn-info btn-file btn-block form-control"> <span class="glyphicon glyphicon-folder-open"></span> Open GCODE <input type="file" id="fileInputGcode" /></span>
+<span id="inputStl" type="button" class="btn btn-info btn-file btn-block form-control"> <span class="glyphicon glyphicon-folder-open"></span> Open STL <input type="file" id="fileInputStl"></span>
+
+<button type="button" class="btn btn-info btn-file btn-block disabled" id="sliceStl" data-toggle="modal" data-target="#sliceModal"> <span class="glyphicon glyphicon-wrench"></span> Prepare STL for Printing</button>
+<button type="button" class="btn btn-success disabled btn-block" id="sendToPrinter"> <span class="glyphicon glyphicon-play"></span> Print</button>
+<button type="button" class="btn btn-danger disabled btn-block" id="stop" ><span class="glyphicon glyphicon-stop"></span> Stop</button>
+
+</div>
+<div class="col-md-4">
+	<center>
+		<canvas id="renderArea" width="400" height="400"></canvas> <br>
+		<button type="button" class="btn btn-default disabled" id="modelDimensions">Model Dimensions: X:0 Y:0 Z:0</button>
+		<button type="button" class="btn btn-sm" id="modelTop">Top</button>
+		<button type="button" class="btn btn-sm" id="modelFront">Front</button>
+		<button type="button" class="btn btn-sm" id="modelSide">Side</button>
+	</center>
+</div>
+
+<div class="col-md-4" id="col3">
+
+<div style="float: right; margin-left: 10px; margin-top: 0px; margin-bottom: 10px;">
+<button type="button" id="zPTen" class="btn btn-default btn-sm xyzButton"><span class="glyphicon glyphicon-arrow-up"></span>10</button>
+<br />
+<button type="button" id="zP" class="btn btn-default btn-sm xyzButton"><span class="glyphicon glyphicon-arrow-up"></span>1</button>
+<br />
+<button type="button" id="zM" class="btn btn-default btn-sm xyzButton"><span class="glyphicon glyphicon-arrow-down"></span>1</button>
+<br />
+<button type="button" id="zMTen" class="btn btn-default btn-sm xyzButton"><span class="glyphicon glyphicon-arrow-down"></span>10</button>
+</div>
+
+<div style="float: right; margin-right: 40px;">
+<div style="float: left;">
+<button type="button" id="xMTen" class="btn btn-default btn-sm xyzButton" style="float: left; margin-top: 65px;"><span class="glyphicon glyphicon-chevron-left"></span>10</button>
+<button type="button" id="xM" class="btn btn-default btn-sm xyzButton" style="float: left; margin-top: 65px;"><span class="glyphicon glyphicon-chevron-left"></span>1</button>
+
+<div style="position: relative; float: left; margin: 10px;">
+<button type="button" id="yPTen" class="btn btn-default btn-sm xyzButton" style="float: left;"><span class="glyphicon glyphicon-chevron-up"></span>10</button>
+<br />
+<button type="button" id="yP" class="btn btn-default btn-sm xyzButton" style="float: left;"><span class="glyphicon glyphicon-chevron-up"></span>1</button>
+
+<br />
+<br />
+
+<button type="button" id="yM" class="btn btn-default btn-sm xyzButton" style="float: left;"><span class="glyphicon glyphicon-chevron-down"></span>1</button>
+<br />
+<button type="button" id="yMTen" class="btn btn-default btn-sm xyzButton" style="float: left;"><span class="glyphicon glyphicon-chevron-down"></span>10</button>
+</div>
+
+<button type="button" id="xP" class="btn btn-default btn-sm xyzButton" style="float: left; margin-top: 65px;">1<span class="glyphicon glyphicon-chevron-right"></span></button>
+<button type="button" id="xPTen" class="btn btn-default btn-sm xyzButton" style="float: left; margin-top: 65px;">10<span class="glyphicon glyphicon-chevron-right"></span></button>
+</div>
+</div>
+
+<hr style="clear: both;" />
+
+
+	<table>
+	<tr>
+	<td>
+	<b>Extruder:</b> (Set to: <span id="eTS" style="color: green;">--.-°C</span>)
+	<div class="progress" style="width: 150px;">  <div class="progress-bar progress-bar-danger" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;" id="pgse1"> 
+	<span id="eTC" style="color: white;">--.-C</span>    </div> </div>
+	</td><td><span style="margin-left: 40px;">
+	<b>Bed:</b> (Set to: <span id="bTS" style="color: green;">--.-</span>) 
+	<div class="progress" style="width: 150px; margin-left: 40px;">  <div class="progress-bar progress-bar-danger" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%;" id="pgsbed">
+	<span id="bTC" style="color: white;">--.-°C</span> </div> </div>
+	</span></td></tr></table>
+	
+	<div class="input-group">
+		<span class="input-group-addon" style="width:130px;">Nozzle Temp</span><input type="text" class="form-control input-sm" id="extrudeTemp" value="180" / style="width:60px;"><span class="input-group-addon">°C</span>
+		<span class="input-group-btn">
+		<button type="button" class="btn btn-default btn-sm" id="extrudeTempSet" style="width:80px;"> <span class="glyphicon glyphicon-off"></span> Set E0</button>
+		<button type="button" class="btn btn-default btn-sm" id="extrudeTempOff" style="width:60px;">Off</button>
+		</span>
+	</div><!-- /input-group -->
+
+	<div class="input-group">
+		<span class="input-group-addon" style="width:130px;">Bed Temp</span><input type="text" class="form-control input-sm" id="bedTemp" value="90" / style="width:60px;"><span class="input-group-addon">°C</span>
+			<span class="input-group-btn">
+				<button type="button" class="btn btn-default btn-sm" id="bedTempSet" style="width:80px;"> <span class="glyphicon glyphicon-off"></span> Set Bed</button>
+				<button type="button" class="btn btn-default btn-sm" id="bedTempOff" style="width:60px;">Off</button>
+			</span>
+	</div><!-- /input-group -->
+
+	<div class="input-group input-group-sm">
+		<span class="input-group-addon" style="width:65px;">Extrude</span><input type=text" class="form-control btn-sm" id="extrudeValue" value="5" / style="width:60px;"><span class="input-group-addon">mm at</span>
+		<input type="text" class="form-control btn-sm" id="extrudeSpeed" value="250" / style="width:60px;"><span class="input-group-addon">mm/min</span>
+		<span class="input-group-btn">
+		<button type="button" class="btn btn-default btn-sm" id="extrudeMM"  style="width:60px;">Extrude</button>
+		</span>
+	</div><!-- /input-group -->
+
+	<hr style="clear: both;" />
+	
+	<div style="clear: both;">
+		<button type="button" id="g28" class="btn btn-default btn-sm">Home</button>
+		<button type="button" id="g29" class="btn btn-default btn-sm">Autolevel</button>
+		<button type="button" id="pause" class="btn btn-default btn-sm">Pause</button>
+		<button type="button" id="clearQ" class="btn btn-default btn-sm disabled">Clear Q</button>
+	</div>
+
+
+
+</div>
+
+
+	
+	
+
+<div class="modal fade" id="sliceModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title" id="myModalLabel">Cura Settings</h4>
+      </div>
+      <div class="modal-body">
+        <p style="margin-top: 4px;" id="fileStatus">File Loaded: </p>
+
+<hr style="clear: both;" />
+
+<div class="input-group" style="margin: 10px; margin-top: 0px; width: 80px; float: left;">
+</div><!-- /input-group -->
+
+<button type="button" class="btn btn-success disabled" id="processStl" style="float: right">Process STL -> GCODE</button>
+
+<br style="clear: both;" />
+
+<img id="slActivity" style="display: none; float: right; margin-top: 8px;" src="activity.gif" />
+
+<p style="margin: 10px; font-size: 12px; color: #999;">Select a preset, or customise a preset and click Update Preset. <br>Once configured, click Process STL->GCODE to prepare your STL file for printing</p>
+
+
+<select class="form-control" id="selectPreset" style="margin-top: 10px; margin-bottom: 10px;">
+<option value="0">Select Profile</option>
+</select>
+
+
+<div class="input-group">
+<input type="text" class="form-control" id="newPresetName">
+<span class="input-group-btn">
+<button id="newPreset" class="btn btn-default" type="button">Create New Profile</button>
+</span>
+</div><!-- /input-group -->
+
+
+<div class="input-group">
+<span class="input-group-btn">
+<button id="updatePreset" class="btn btn-default disabled" type="button">Update Profile</button>
+<button id="deletePreset" class="btn btn-default disabled" type="button">Delete Profile</button>
+<p style="margin: 10px; font-size: 12px; color: #999;">Save the current settings with the name you type in the field, an existing name will overwrite the old preset.</p>
+
+</span>
+</div><!-- /input-group -->
+
+<h4 style="margin: 10px; color: #999;">Profile Settings:</h4>
+
+<div id="slOpts">
+
+<div id="slOptsValues"></div>
+
+</div>
+
+
+      </div>
+      <div class="modal-footer">
+        <!--button type="button" class="btn btn-default" data-dismiss="modal">Close</button // Commented out - using $('#sliceModal').modal('toggle'); in main.js to close once sliced-->
+        
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+</body>
+</html>
